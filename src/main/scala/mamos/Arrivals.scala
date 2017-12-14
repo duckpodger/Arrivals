@@ -48,8 +48,8 @@ class Arrivals(stopPoint: StopPointId, line: LineId, arrivalsBoard: ArrivalsBoar
         })
     }
 
-    //update the following arrivals board
-    arrivalsBoard.send_following_arrivals(initialArrivals.tail.map(_.toString))
+    // update the following arrivals board
+    arrivalsBoard.send_following_arrivals(initialArrivals.map(_.toString))
   }
 
 }
