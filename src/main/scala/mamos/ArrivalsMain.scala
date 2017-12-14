@@ -1,13 +1,20 @@
 package mamos
 
-import java.util.concurrent.Executors
+import java.time.Clock
+import java.util.concurrent.{Executors, TimeUnit}
 
 object ArrivalsMain extends App {
   val arrivals = new Arrivals(
     "940GZZLUWLO","bakerloo",
-    new ArrivalsBoard {
-      override def send_following_arrivals(arrivals: Seq[String]): Unit = {}
-      override def send_arrival(arrival: String): Unit = {}
-    },
-    Executors.newSingleThreadScheduledExecutor())
+    new ArrivalsRecordingProxy(
+      new ArrivalsBoard {
+        override def send_following_arrivals(arrivals: Seq[String]): Unit = {}
+        override def send_arrival(arrival: String): Unit = {}
+      },
+      Clock.systemUTC(),
+      "Arrivals.log"
+    ),
+    new TflWebApi,
+    Executors.newSingleThreadScheduledExecutor(),
+    pollUnits = TimeUnit.SECONDS)
 }

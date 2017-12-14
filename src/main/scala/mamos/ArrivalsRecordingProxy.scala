@@ -3,8 +3,8 @@ package mamos
 import java.io.{FileOutputStream, PrintStream}
 import java.time.{Clock, Instant}
 
+import mamos.InstantJson._
 import spray.json._
-import InstantJson._
 
 class ArrivalsRecordingProxy(board: ArrivalsBoard, clock: Clock, file: String) extends ArrivalsBoard {
   private val os = new PrintStream(new FileOutputStream(file))
