@@ -16,5 +16,6 @@ object ArrivalsMain extends App {
     ),
     new TflWebApi,
     Executors.newSingleThreadScheduledExecutor(),
+    pollPeriod = 30,
     pollUnits = TimeUnit.SECONDS)
 }
