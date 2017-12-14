@@ -20,15 +20,16 @@ class Arrivals(stopPoint: StopPointId, line: LineId, arrivalsBoard: ArrivalsBoar
   )
 
   private def scheduleAnnouncement(train: ExpectedArrival) = {
-      scheduler.schedule(
-        new Runnable {
-          override def run(): Unit = {
-              arrivalsBoard.send_arrival(s"The train that has now arrived at ${train.expectedArrival} is for ${train.destinationName}")
-          }
-        },
-        train.expectedArrival.toEpochMilli - clock.millis,
-        TimeUnit.MILLISECONDS
-      )
+    val delay = train.expectedArrival.toEpochMilli - clock.millis
+    scheduler.schedule(
+      new Runnable {
+        override def run(): Unit = {
+            arrivalsBoard.send_arrival(s"The train that has now arrived at ${train.expectedArrival} is for ${train.destinationName}")
+        }
+      },
+      delay,
+      TimeUnit.MILLISECONDS
+    )
   }
 
   def update() = {
@@ -47,6 +48,7 @@ class Arrivals(stopPoint: StopPointId, line: LineId, arrivalsBoard: ArrivalsBoar
       // a new train, don't cancel the previous announcement to ensure that it is made
       case (Some(newA), _) =>
         pendingAnnouncement = Some(scheduleAnnouncement(newA))
+      case _ =>
     }
 
     nextArrival = newNextArrival
