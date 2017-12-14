@@ -1,7 +1,7 @@
 package mamos
 
 import java.time.Clock
-import java.util.concurrent.{ScheduledExecutorService, TimeUnit}
+import java.util.concurrent.{ScheduledExecutorService, ScheduledFuture, TimeUnit}
 
 import TflApi._
 
@@ -9,6 +9,7 @@ import TflApi._
 class Arrivals(stopPoint: StopPointId, line: LineId, arrivalsBoard: ArrivalsBoard, tfl: TflApi, scheduler: ScheduledExecutorService, clock: Clock, pollPeriod: Long = 1, pollUnits: TimeUnit = TimeUnit.MINUTES) {
   // Mutable state
   @volatile var nextArrival:Option[ExpectedArrival] = None
+  @volatile var pendingAnnouncement: Option[ScheduledFuture[_]] = None
 
   // scheduler does our initial retrieval as well as the repeated one
   scheduler.scheduleAtFixedRate(
@@ -18,35 +19,37 @@ class Arrivals(stopPoint: StopPointId, line: LineId, arrivalsBoard: ArrivalsBoar
     0,pollPeriod, pollUnits
   )
 
+  private def scheduleAnnouncement(train: ExpectedArrival) = {
+      scheduler.schedule(
+        new Runnable {
+          override def run(): Unit = {
+              arrivalsBoard.send_arrival(s"The train that has now arrived at ${train.expectedArrival} is for ${train.destinationName}")
+          }
+        },
+        train.expectedArrival.toEpochMilli - clock.millis,
+        TimeUnit.MILLISECONDS
+      )
+  }
+
   def update() = {
-    // retrieve arrivals
+    // retrieve arrivals & sort them
     val initialArrivals = tfl.getArrivals(stopPoint,line).sortBy(_.expectedArrival)
 
     val newNextArrival = initialArrivals.headOption
 
     (newNextArrival, nextArrival) match {
-      case (Some(a), Some(b)) if b == a => //do nothing, no change
-      case (None, None) => //do nothing, no change
-      case _ =>
-        nextArrival = newNextArrival
-
-        // announce new value, at the correct time
-        nextArrival.foreach(a => {
-          scheduler.schedule(
-            new Runnable {
-              override def run(): Unit = {
-                // ignore if the next has changed, e.g. train was delayed
-                // need to see when tfl remove the trains, would be annoying to miss the announcement
-                // because api was updated too quickly
-                if (nextArrival == a)
-                  arrivalsBoard.send_arrival(a.toString)
-              }
-            },
-            a.expectedArrival.toEpochMilli - clock.millis,
-            TimeUnit.MILLISECONDS
-          )
-        })
+      // if the next train expected hasn't changed, but the time has, cancel and replace the scheduled announcement
+      case (Some(newA), Some(oldA)) if newA.vehicleId == oldA.vehicleId =>
+        if (newA.expectedArrival != oldA.expectedArrival) {
+          pendingAnnouncement.foreach(_.cancel(false))
+          pendingAnnouncement = Some(scheduleAnnouncement(newA))
+        }
+      // a new train, don't cancel the previous announcement to ensure that it is made
+      case (Some(newA), _) =>
+        pendingAnnouncement = Some(scheduleAnnouncement(newA))
     }
+
+    nextArrival = newNextArrival
 
     // update the following arrivals board
     arrivalsBoard.send_following_arrivals(initialArrivals.map(_.toString))

@@ -13,14 +13,15 @@ import org.apache.http.util.EntityUtils
 object TflApi {
   type StopPointId = String
   type LineId = String
+  type VehicleId = String
 }
 
 object ExpectedArrivalProtocol extends DefaultJsonProtocol with CollectionFormats {
-  implicit val arrivalFormat = jsonFormat4(ExpectedArrival)
+  implicit val arrivalFormat = jsonFormat5(ExpectedArrival)
   implicit val arrivalsFormat = listFormat[ExpectedArrival]
 }
 
-case class ExpectedArrival(naptanId:StopPointId, lineId:LineId, expectedArrival: Instant, destinationName: String) {
+case class ExpectedArrival(naptanId: StopPointId, lineId: LineId, expectedArrival: Instant, destinationName: String, vehicleId: VehicleId) {
   override def toString: String = {
     s"The train to $destinationName will arrive at $expectedArrival"
   }
