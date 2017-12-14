@@ -20,6 +20,9 @@ class ArrivalsRecordingProxy(board: ArrivalsBoard, clock: Clock, file: String) e
   case class FollowingArrivalsEvent(eventTime: Instant, arrivals: Seq[String])
 
   override def send_following_arrivals(arrivals: Seq[String]): Unit = {
+    val event = FollowingArrivalsEvent(Instant.now(clock), arrivals)
+    board.send_following_arrivals(arrivals)
 
+    os.println(event.toJson)
   }
 }
