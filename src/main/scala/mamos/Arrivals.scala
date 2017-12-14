@@ -1,0 +1,5 @@
+package mamos
+
+class Arrivals {
+
+}
