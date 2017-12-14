@@ -20,7 +20,7 @@ class Arrivals(stopPoint: StopPointId, line: LineId, arrivalsBoard: ArrivalsBoar
 
   def update() = {
     // retrieve arrivals
-    val initialArrivals = tfl.getArrivals(stopPoint,line)
+    val initialArrivals = tfl.getArrivals(stopPoint,line).sortBy(_.expectedArrival)
 
     val newNextArrival = initialArrivals.headOption
 
