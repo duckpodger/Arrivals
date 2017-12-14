@@ -1,15 +1,14 @@
 package mamos
 import java.time.Instant
-import javax.inject.Inject
 
 import TflApi._
 import TflWebApi._
-import play.api.libs.ws.WSClient
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.impl.client.HttpClientBuilder
 import spray.json._
-import scala.concurrent.duration._
-import InstantJson._
 
-import scala.concurrent.{Await, ExecutionContext}
+import InstantJson._
+import org.apache.http.util.EntityUtils
 
 object TflApi {
   type StopPointId = String
@@ -39,14 +38,16 @@ object TflWebApi {
 
 import ExpectedArrivalProtocol._
 
-class TflWebApi @Inject() (ws: WSClient, implicit val ec: ExecutionContext) extends TflApi {
+class TflWebApi() extends TflApi {
+  private val httpClient = HttpClientBuilder.create().build()
+
   override def getArrivals(stopPoint: StopPointId, line: LineId): Seq[ExpectedArrival] = {
-    val request = ws.url(tflArrivalsUrl(stopPoint,line))
-      .addHttpHeaders("Accept" -> "application/json")
-    val responseFuture = request.get().map {
-      response =>
-        response.body[String].toJson.convertTo[List[ExpectedArrival]]
-    }
-    Await.result(responseFuture, 0 nanos)
+    val req = new HttpGet(tflArrivalsUrl(stopPoint,line))
+    req.setHeader("Accept", "application/json")
+
+    //Tooo: sort out error handling
+    val resp = httpClient.execute(req)
+
+    EntityUtils.toString(resp.getEntity).parseJson.convertTo[List[ExpectedArrival]]
   }
 }
